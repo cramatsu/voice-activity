@@ -1,0 +1,1 @@
+create table public.users (id TEXT UNIQUE, voice_time INT DEFAULT 0);

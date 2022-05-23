@@ -1,0 +1,19 @@
+version: '3'
+services:
+  database:
+    build:
+      context: docker/postgres
+      dockerfile: Dockerfile
+    container_name: 'database'
+    ports:
+      - '5432:5432'
+    environment:
+      'POSTGRES_DB': 'voice'
+      'POSTGRES_USER': 'me'
+      'POSTGRES_PASSWORD': 'kino'
+
+  redis:
+    image: redis:alpine
+    container_name: 'redis'
+    ports:
+      - '6379:6379'
