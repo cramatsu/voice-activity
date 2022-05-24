@@ -10,9 +10,11 @@ import { codeBlock } from '@discordjs/builders';
 import { PrismaClient } from '@prisma/client';
 import { BaseCommandInteraction, MessageEmbed } from 'discord.js';
 import { Discord, Slash, SlashGroup } from 'discordx';
+import Redis from 'ioredis';
 import { Duration } from 'luxon';
 import { inject, injectable } from 'tsyringe';
-import { kPrisma } from '../tokens';
+import { keyspaces } from '../keyspaces';
+import { kPrisma, kRedis } from '../tokens';
 
 @Discord()
 @injectable()
@@ -21,7 +23,7 @@ import { kPrisma } from '../tokens';
 })
 @SlashGroup('voice')
 export class VoiceActivity {
-	constructor(@inject(kPrisma) public readonly prisma: PrismaClient) {}
+	constructor(@inject(kPrisma) public readonly prisma: PrismaClient, @inject(kRedis) public readonly redis: Redis) {}
 
 	@Slash('leaders', {
 		description: 'Топ-5 лидеров по голосовому онлайну',
@@ -75,10 +77,39 @@ export class VoiceActivity {
 		});
 	}
 
+	@Slash('session', {
+		description: 'Длительность текущего голосового сеанса',
+	})
+	async voiceSession(int: BaseCommandInteraction<'cached'>) {
+		if (int.member.voice.channelId) {
+			const voiceSince = (await this.redis.get(keyspaces.voiceSince(int.user.id))) as unknown as number;
+			const spentSeconds = Math.floor((Date.now() - voiceSince) / 1000);
+			await int.reply({
+				embeds: [
+					new MessageEmbed()
+						.addField(
+							'> Длительность сессии',
+							codeBlock(
+								Duration.fromObject({
+									seconds: spentSeconds,
+								}).toFormat("h 'час.' m 'мин.' s 'сек.'"),
+							),
+						)
+						.setColor('BLURPLE'),
+				],
+			});
+		} else {
+			await int.reply({
+				content: codeBlock('diff', '- Вы не находитесь в голосом канале!'),
+				ephemeral: true,
+			});
+		}
+	}
+
 	@Slash('activity', {
 		description: 'Ваше время, проведенное в голосовых каналах',
 	})
-	async showVoiceStats(int: BaseCommandInteraction<'cached'>) {
+	async voiceStats(int: BaseCommandInteraction<'cached'>) {
 		const user = await this.prisma.user.upsert({
 			where: {
 				id: int.user.id,

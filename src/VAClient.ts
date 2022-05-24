@@ -49,6 +49,16 @@ export class VAClient {
 					log: true,
 				},
 			});
+
+			this._client.user!.setPresence({
+				status: 'idle',
+				activities: [
+					{
+						type: 'WATCHING',
+						name: 'за вашей активностью (´ ω `♡)',
+					},
+				],
+			});
 		});
 	}
 
