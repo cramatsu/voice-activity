@@ -9,7 +9,7 @@ import { kRedis } from '../tokens';
 @Discord()
 @injectable()
 export class Voice {
-	constructor(@inject(kRedis) public readonly redis: Redis) {}
+	public constructor(@inject(kRedis) public readonly redis: Redis) {}
 	@On('voiceStateUpdate')
 	async voiceStateChanged([oldState, newState]: ArgsOf<'voiceStateUpdate'>) {
 		/*
@@ -19,11 +19,11 @@ export class Voice {
 
 		if (newState.channel) {
 			if (oldState.channel) return;
-			this.redis.set(keyspaces.voiceSince(newState.id), Date.now());
+			await this.redis.set(keyspaces.voiceSince(newState.id), Date.now());
 		} else {
 			const joinedAt = (await this.redis.get(keyspaces.voiceSince(oldState.id))) as unknown as number;
 			await saveTime(oldState.id, joinedAt);
-			this.redis.del(keyspaces.voiceSince(oldState.id));
+			await this.redis.del(keyspaces.voiceSince(oldState.id));
 		}
 	}
 }

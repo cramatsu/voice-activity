@@ -4,7 +4,7 @@ services:
     build:
       context: docker/postgres
       dockerfile: Dockerfile
-    container_name: 'database'
+    container_name: 'postgres'
     ports:
       - '5432:5432'
     environment:
@@ -17,3 +17,18 @@ services:
     container_name: 'redis'
     ports:
       - '6379:6379'
+
+  bot:
+    depends_on:
+      - redis
+      - database
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bot
+    environment:
+      DISCORD_TOKEN: 'ТОКЕН'
+      GUILD_ID: 'ID ГИЛЬДИИ'
+      DATABASE_URL: 'postgres://me:kino@postgres:5432/voice'
+
+    restart: on-failure

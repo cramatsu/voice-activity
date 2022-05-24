@@ -1,1 +1,1 @@
-create table public.users (id TEXT UNIQUE, voice_time INT DEFAULT 0);
+create table public.users (id TEXT UNIQUE, voice_time INT DEFAULT 0, voice_today INT default 0);

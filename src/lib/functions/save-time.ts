@@ -15,9 +15,13 @@ export const saveTime = async (userId: Snowflake, joinedAt: number): Promise<voi
 		create: {
 			id: userId,
 			voiceTime: spentSeconds,
+			voiceToday: spentSeconds,
 		},
 		update: {
 			voiceTime: {
+				increment: spentSeconds,
+			},
+			voiceToday: {
 				increment: spentSeconds,
 			},
 		},

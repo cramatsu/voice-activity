@@ -7,7 +7,7 @@ dist/
 typings/
 tsconfig.tsbuildinfo
 
-# Логи-хуеги
+# Логи-хуёги
 logs
 !src/functions/logs
 *.log

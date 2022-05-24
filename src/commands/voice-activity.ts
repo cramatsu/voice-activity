@@ -23,6 +23,58 @@ import { kPrisma } from '../tokens';
 export class VoiceActivity {
 	constructor(@inject(kPrisma) public readonly prisma: PrismaClient) {}
 
+	@Slash('leaders', {
+		description: 'Топ-5 лидеров по голосовому онлайну',
+	})
+	async voiceLeaders(int: BaseCommandInteraction<'cached'>) {
+		const users = await this.prisma.user.groupBy({
+			by: ['voiceTime', 'id'],
+			orderBy: {
+				voiceTime: 'desc',
+			},
+			take: 5,
+		});
+
+		if (users.length < 1) {
+			return int.reply({
+				content: codeBlock('diff', '- Недостаточно участников для подсчета'),
+			});
+		}
+
+		const leaderEmbed = new MessageEmbed();
+
+		leaderEmbed.setColor('BLURPLE');
+
+		const leader = await int.guild.members.fetch(users[0].id);
+
+		if (leader) {
+			leaderEmbed.setAuthor({
+				name: `Лидер - ${leader.user.username}`,
+				iconURL: leader.user.displayAvatarURL(),
+			});
+		}
+
+		for (const user of users) {
+			const member = await int.guild.members.fetch(user.id);
+
+			if (member) {
+				leaderEmbed.addField(
+					member.user.username ?? 'Анонимный пользователь',
+					codeBlock(
+						Duration.fromObject({
+							seconds: user.voiceTime,
+						}).toFormat("h 'час.' m 'мин.'"),
+					),
+					false,
+				);
+			}
+		}
+
+		await int.reply({
+			embeds: [leaderEmbed],
+		});
+	}
+
 	@Slash('activity', {
 		description: 'Ваше время, проведенное в голосовых каналах',
 	})
@@ -37,18 +89,34 @@ export class VoiceActivity {
 			},
 			select: {
 				voiceTime: true,
+				voiceToday: true,
 			},
 		});
 
 		await int.reply({
 			embeds: [
 				new MessageEmbed()
-					.setDescription(
+					.setAuthor({
+						name: `Голосовой онлайн ${int.user.username}`,
+						iconURL: int.user.displayAvatarURL(),
+					})
+					.addField(
+						'> Общий онлайн',
 						codeBlock(
-							`Голосовой онлайн ${Duration.fromObject({
+							Duration.fromObject({
 								seconds: user.voiceTime,
-							}).toFormat("h 'час.' m 'мин.'")}`,
+							}).toFormat("h 'час.' m 'мин.'"),
 						),
+						true,
+					)
+					.addField(
+						'> Сегодня',
+						codeBlock(
+							Duration.fromObject({
+								seconds: user.voiceToday,
+							}).toFormat("h 'час.' m 'мин.'"),
+						),
+						true,
 					)
 					.setColor('BLURPLE'),
 			],

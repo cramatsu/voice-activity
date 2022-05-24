@@ -10,5 +10,6 @@ generator client {
 model User {
     id String @id @unique
     voiceTime Int @map("voice_time") @default(0)
+    voiceToday Int @map("voice_today") @default(0)
     @@map("users")
 }
