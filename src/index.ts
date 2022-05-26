@@ -59,6 +59,6 @@ bree.on('worker deleted', (name: string) => {
 });
 process.on('unhandledRejection', (err: Error) => {
 	logger.error({
-		message: `Необработанная ошибка ${err.message}`,
+		message: `Необработанная ошибка ${err.message}\n${err.stack}`,
 	});
 });

@@ -10,10 +10,16 @@ import { importx } from '@discordx/importer';
 import type { Interaction } from 'discord.js';
 import { Intents } from 'discord.js';
 import { Client } from 'discordx';
+import { Api } from './api/server';
 import { logger } from './logger';
 
 export class VAClient {
 	private readonly _client: Client;
+	private readonly _api: Api;
+
+	get api(): Api {
+		return this._api;
+	}
 
 	public get client(): Client {
 		return this._client;
@@ -30,6 +36,8 @@ export class VAClient {
 			partials: ['CHANNEL', 'MESSAGE'],
 			botGuilds: [process.env.GUILD_ID!],
 		});
+
+		this._api = new Api();
 
 		this._client.on('interactionCreate', async (interaction: Interaction) => {
 			await this._client.executeInteraction(interaction);
@@ -50,6 +58,7 @@ export class VAClient {
 				},
 			});
 
+			await this._api.run();
 			this._client.user!.setPresence({
 				status: 'idle',
 				activities: [
