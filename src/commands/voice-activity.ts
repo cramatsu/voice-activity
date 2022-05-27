@@ -85,7 +85,7 @@ export class VoiceActivity {
 			await int.reply({
 				content: codeBlock('diff', '- Недостаточно участников для подсчета'),
 			});
-			return; 
+			return;
 		}
 
 		const leaderEmbed = new MessageEmbed();
@@ -109,7 +109,6 @@ export class VoiceActivity {
 		}
 
 		for (const user of users) {
-
 			try {
 				const member = await int.guild.members.fetch(user.id);
 				leaderEmbed.addField(
@@ -130,7 +129,6 @@ export class VoiceActivity {
 					});
 				}
 			}
-
 		}
 
 		await int.reply({
