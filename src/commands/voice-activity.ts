@@ -6,9 +6,9 @@
 
  */
 
-import { codeBlock } from '@discordjs/builders';
+import { channelMention, codeBlock } from '@discordjs/builders';
 import { PrismaClient } from '@prisma/client';
-import { BaseCommandInteraction, MessageEmbed } from 'discord.js';
+import { BaseCommandInteraction, DiscordAPIError, MessageEmbed, Permissions, VoiceChannel } from 'discord.js';
 import { Discord, Slash, SlashGroup } from 'discordx';
 import Redis from 'ioredis';
 import { Duration } from 'luxon';
@@ -23,12 +23,56 @@ import { kPrisma, kRedis } from '../tokens';
 })
 @SlashGroup('voice')
 export class VoiceActivity {
-	constructor(@inject(kPrisma) public readonly prisma: PrismaClient, @inject(kRedis) public readonly redis: Redis) {}
+	public constructor(
+		@inject(kPrisma) public readonly prisma: PrismaClient,
+		@inject(kRedis) public readonly redis: Redis,
+	) {}
+
+	@Slash('active-channel', {
+		description: 'Самый активный голосовой канал',
+	})
+	private async mostActiveChannel(int: BaseCommandInteraction<'cached'>) {
+		const guildChannels = await int.guild.channels.fetch();
+
+		const voiceChannels = guildChannels
+			.filter(
+				(ch) =>
+					ch.isVoice() &&
+					ch.viewable &&
+					ch.joinable &&
+					ch.permissionsFor(int.member).has(['CONNECT', 'VIEW_CHANNEL']) &&
+					ch.members.size > 0,
+			)
+			.map((it) => it);
+
+		if (voiceChannels.length === 0) {
+			await int.reply({
+				content: codeBlock('diff', '- Ох, похоже на сервере сейчас пусто :('),
+				ephemeral: true,
+			});
+			return;
+		}
+		const mostActive = voiceChannels.reduce((prev, current) =>
+			prev.members.size > current.members.size ? prev : current,
+		);
+
+		await int.reply({
+			embeds: [
+				new MessageEmbed()
+					.setAuthor({
+						name: `Самый активный канал - ${mostActive.name}`,
+					})
+					.addField('> Подключиться', channelMention(mostActive.id), true)
+					.addField('> Участников', `**${mostActive.members.size}**`, true)
+					.setColor('BLURPLE'),
+			],
+		});
+	}
 
 	@Slash('leaders', {
 		description: 'Топ-5 лидеров по голосовому онлайну',
 	})
-	async voiceLeaders(int: BaseCommandInteraction<'cached'>) {
+	private async voiceLeaders(int: BaseCommandInteraction<'cached'>) {
 		const users = await this.prisma.user.groupBy({
 			by: ['voiceTime', 'id'],
 			orderBy: {
@@ -38,30 +82,38 @@ export class VoiceActivity {
 		});
 
 		if (users.length < 1) {
-			return int.reply({
+			await int.reply({
 				content: codeBlock('diff', '- Недостаточно участников для подсчета'),
 			});
+			return; 
 		}
 
 		const leaderEmbed = new MessageEmbed();
 
 		leaderEmbed.setColor('BLURPLE');
 
-		const leader = await int.guild.members.fetch(users[0].id);
-
-		if (leader) {
+		try {
+			const leader = await int.guild.members.fetch(users[0].id);
 			leaderEmbed.setAuthor({
 				name: `Лидер - ${leader.user.username}`,
 				iconURL: leader.user.displayAvatarURL(),
 			});
+		} catch (e) {
+			if (e instanceof DiscordAPIError) {
+				await this.prisma.user.delete({
+					where: {
+						id: users[0].id,
+					},
+				});
+			}
 		}
 
 		for (const user of users) {
-			const member = await int.guild.members.fetch(user.id);
 
-			if (member) {
+			try {
+				const member = await int.guild.members.fetch(user.id);
 				leaderEmbed.addField(
-					member.user.username ?? 'Анонимный пользователь',
+					member.user.username,
 					codeBlock(
 						Duration.fromObject({
 							seconds: user.voiceTime,
@@ -69,7 +121,16 @@ export class VoiceActivity {
 					),
 					false,
 				);
+			} catch (e) {
+				if (e instanceof DiscordAPIError) {
+					await this.prisma.user.delete({
+						where: {
+							id: user.id,
+						},
+					});
+				}
 			}
+
 		}
 
 		await int.reply({
@@ -80,7 +141,7 @@ export class VoiceActivity {
 	@Slash('session', {
 		description: 'Длительность текущего голосового сеанса',
 	})
-	async voiceSession(int: BaseCommandInteraction<'cached'>) {
+	private async voiceSession(int: BaseCommandInteraction<'cached'>) {
 		if (int.member.voice.channelId) {
 			const voiceSince = (await this.redis.get(keyspaces.voiceSince(int.user.id))) as unknown as number;
 			const spentSeconds = Math.floor((Date.now() - voiceSince) / 1000);
@@ -109,7 +170,7 @@ export class VoiceActivity {
 	@Slash('activity', {
 		description: 'Ваше время, проведенное в голосовых каналах',
 	})
-	async voiceStats(int: BaseCommandInteraction<'cached'>) {
+	private async voiceStats(int: BaseCommandInteraction<'cached'>) {
 		const user = await this.prisma.user.upsert({
 			where: {
 				id: int.user.id,

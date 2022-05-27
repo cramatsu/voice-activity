@@ -11,11 +11,11 @@ import { kRedis } from '../tokens';
 export class Voice {
 	public constructor(@inject(kRedis) public readonly redis: Redis) {}
 	@On('voiceStateUpdate')
-	async voiceStateChanged([oldState, newState]: ArgsOf<'voiceStateUpdate'>) {
+	private async voiceStateChanged([oldState, newState]: ArgsOf<'voiceStateUpdate'>) {
 		/*
 		 * Стоп-условие, исключающее события, не связанные с выходом/входом
 		 * */
-		if (oldState.channelId == newState.channelId) return;
+		if (oldState.channelId === newState.channelId) return;
 
 		if (newState.channel) {
 			if (oldState.channel) return;

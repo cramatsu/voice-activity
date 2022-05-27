@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { join } from 'path';
 import { PrismaClient } from '@prisma/client';
-import Bree from 'bree';
+import Bree, { Job } from 'bree';
 import { DIService } from 'discordx';
 import Redis from 'ioredis';
 import { container } from 'tsyringe';
@@ -13,12 +13,12 @@ DIService.container = container;
 
 const bot = new VAClient();
 
-bot.init();
+void bot.init();
 
 const prisma = new PrismaClient();
 const redis = new Redis(process.env.REDISHOST ?? 'localhost');
 
-prisma.$connect();
+void prisma.$connect();
 
 container.register(kRedis, {
 	useValue: redis,
@@ -38,7 +38,7 @@ const bree = new Bree({
 			interval: 'at 12:00 am',
 		},
 	],
-	errorHandler: (error: Error, workerMetadata) => {
+	errorHandler: (error: Error, workerMetadata: Job) => {
 		logger.error({
 			message: `Ошибка выполнения работы ${workerMetadata.name}: ${error.message}`,
 		});
@@ -59,6 +59,6 @@ bree.on('worker deleted', (name: string) => {
 });
 process.on('unhandledRejection', (err: Error) => {
 	logger.error({
-		message: `Необработанная ошибка ${err.message}\n${err.stack}`,
+		message: `Необработанная ошибка ${err.message}\n${err.stack!}`,
 	});
 });

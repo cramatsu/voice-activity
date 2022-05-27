@@ -17,7 +17,7 @@ export class VAClient {
 	private readonly _client: Client;
 	private readonly _api: Api;
 
-	get api(): Api {
+	public get api(): Api {
 		return this._api;
 	}
 

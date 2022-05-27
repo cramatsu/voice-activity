@@ -15,7 +15,7 @@ export class Other {
 	@Slash('ping', {
 		description: 'Задержка бота',
 	})
-	async test(int: BaseCommandInteraction<'cached'>): Promise<void> {
+	private async test(int: BaseCommandInteraction<'cached'>): Promise<void> {
 		await int.reply({
 			embeds: [
 				new MessageEmbed().setColor('BLURPLE').addFields([

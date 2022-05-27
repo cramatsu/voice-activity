@@ -20,8 +20,8 @@ import { kPrisma } from '../../tokens';
 export class UserRouter {
 	public constructor(@inject(kPrisma) public readonly prisma: PrismaClient) {}
 
-	@Get('/user/:id/voice')
-	async getVoiceTime(ctx: RouterContext): Promise<void> {
+	@Get('/users/:id/voice')
+	private async getVoiceTime(ctx: RouterContext): Promise<void> {
 		const user = await this.prisma.user.findUnique({
 			where: {
 				id: ctx.params.id,
